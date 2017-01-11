@@ -4,10 +4,18 @@
     android:layout_height="match_parent"
     tools:context="com.markfeldman.sunshine.Fragments.ForecastFragment">
 
-    <ListView
-        android:id="@+id/listViewForecast"
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recycleViewForecast"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
-    </ListView>
+
+    </android.support.v7.widget.RecyclerView>
+
+    <ProgressBar
+        android:id="@+id/pb_loading_indicator"
+        android:layout_height="42dp"
+        android:layout_width="42dp"
+        android:layout_gravity="center"
+        android:visibility="invisible" />
 
 </FrameLayout>

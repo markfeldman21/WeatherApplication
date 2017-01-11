@@ -14,6 +14,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 
 public class JsonParser {
     private Context context;
@@ -59,7 +61,7 @@ public class JsonParser {
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
      */
-    public String[] getWeatherDataFromJson(String forecastJsonStr, int numDays)
+    public String[] getWeatherDataFromJson(String forecastJsonStr)
             throws JSONException {
 
         // These are the names of the JSON objects that need to be extracted.
@@ -81,6 +83,7 @@ public class JsonParser {
         // current day, we're going to take advantage of that to get a nice
         // normalized UTC date for all of our weather.
 
+
         Time dayTime = new Time();
         dayTime.setToNow();
 
@@ -90,9 +93,9 @@ public class JsonParser {
         // now we work exclusively in UTC
         dayTime = new Time();
 
-        String[] resultStrs = new String[numDays];
+        String[] resultStrs = new String[weatherArray.length()];
         //**** CHANGED LOOP FROM weatherArray.length() TO numDays
-        for(int i = 0; i < numDays; i++) {
+        for(int i = 0; i < resultStrs.length; i++) {
             // For now, using the format "Day, description, hi/low"
             String day;
             String description;

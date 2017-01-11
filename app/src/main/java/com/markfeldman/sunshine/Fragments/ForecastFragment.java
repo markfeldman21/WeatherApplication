@@ -1,13 +1,13 @@
 package com.markfeldman.sunshine.Fragments;
 
-
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -15,34 +15,29 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.os.AsyncTask;
 import android.widget.Toast;
 
 import com.markfeldman.sunshine.Activities.DetailActivity;
-import com.markfeldman.sunshine.Activities.SettingsActivity;
+import com.markfeldman.sunshine.DataHelpers.ForecastAdapter;
 import com.markfeldman.sunshine.DataHelpers.JsonParser;
 import com.markfeldman.sunshine.R;
 
 import org.json.JSONException;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
-
-public class ForecastFragment extends Fragment {
-    private ListView listView;
-    private ArrayAdapter<String> forecastAdapter;
+public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener {
+    private RecyclerView recyclerView;
+    private ForecastAdapter forecastRecycleAdapter;
     private final String INTENT_EXTRA = "Intent Extra";
+
 
     public ForecastFragment() {
         setHasOptionsMenu(true);
@@ -73,24 +68,12 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_forecast, container, false);
 
-        listView = (ListView) view.findViewById(R.id.listViewForecast);
-
-        forecastAdapter = new ArrayAdapter<String>(getActivity().getApplicationContext(),
-                R.layout.list_item_forecast,
-                R.id.list_item_forecast_textview,
-                new ArrayList<String>());
-
-        listView.setAdapter(forecastAdapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                String detailForecast = forecastAdapter.getItem(position);
-                Intent i = new Intent(getActivity(), DetailActivity.class).putExtra(INTENT_EXTRA,detailForecast);
-                startActivity(i);
-            }
-        });
-
-
+        recyclerView = (RecyclerView)view.findViewById(R.id.recycleViewForecast);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
+        recyclerView.setLayoutManager(layoutManager);
+        recyclerView.setHasFixedSize(true);
+        forecastRecycleAdapter = new ForecastAdapter(this);
+        recyclerView.setAdapter(forecastRecycleAdapter);
         return view;
     }
 
@@ -101,6 +84,11 @@ public class ForecastFragment extends Fragment {
         new RetrieveWeatherData().execute(location);
     }
 
+    @Override
+    public void onClicked(String clickedItemIndex) {
+        Intent i = new Intent(getActivity(), DetailActivity.class).putExtra(INTENT_EXTRA,clickedItemIndex);
+        startActivity(i);
+    }
 
 
     public class RetrieveWeatherData extends AsyncTask<String,Void,String[]> {
@@ -112,6 +100,12 @@ public class ForecastFragment extends Fragment {
             HttpURLConnection urlConnection = null;
             BufferedReader reader = null;
             String forecastJsonStr = null;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+
         }
 
         @Override
@@ -174,7 +168,7 @@ public class ForecastFragment extends Fragment {
                     forecastJsonStr = buffer.toString();
                     //USE JSON OBJECT
                     JsonParser jsonParser = new JsonParser(getActivity());
-                    weatherArray = jsonParser.getWeatherDataFromJson(forecastJsonStr,5);
+                    weatherArray = jsonParser.getWeatherDataFromJson(forecastJsonStr);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -192,20 +186,17 @@ public class ForecastFragment extends Fragment {
                     }
                 }
             }
+
             return weatherArray;
         }
 
         @Override
         protected void onPostExecute(String[] strings) {
+
             super.onPostExecute(strings);
             if (strings!=null){
-                forecastAdapter.clear();
-                for (String cast : strings){
-                    forecastAdapter.add(cast);
-                }
+                forecastRecycleAdapter.setWeatherData(strings);
             }
-
-
         }
     }
 }
