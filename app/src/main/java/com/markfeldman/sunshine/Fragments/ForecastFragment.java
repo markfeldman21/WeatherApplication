@@ -18,11 +18,13 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.os.AsyncTask;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.markfeldman.sunshine.Activities.DetailActivity;
 import com.markfeldman.sunshine.DataHelpers.ForecastAdapter;
 import com.markfeldman.sunshine.DataHelpers.JsonParser;
+import com.markfeldman.sunshine.DataHelpers.NetworkUtils;
 import com.markfeldman.sunshine.R;
 
 import org.json.JSONException;
@@ -37,6 +39,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     private RecyclerView recyclerView;
     private ForecastAdapter forecastRecycleAdapter;
     private final String INTENT_EXTRA = "Intent Extra";
+    private TextView errorMessage;
 
 
     public ForecastFragment() {
@@ -67,6 +70,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_forecast, container, false);
+        errorMessage = (TextView)view.findViewById(R.id.tv_error_message_display);
 
         recyclerView = (RecyclerView)view.findViewById(R.id.recycleViewForecast);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
@@ -84,6 +88,17 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         new RetrieveWeatherData().execute(location);
     }
 
+    private void showErrorMessage(){
+        recyclerView.setVisibility(View.INVISIBLE);
+        errorMessage.setVisibility(View.VISIBLE);
+
+    }
+
+    private void showWeatherDataView() {
+        errorMessage.setVisibility(View.INVISIBLE);
+        recyclerView.setVisibility(View.VISIBLE);
+    }
+
     @Override
     public void onClicked(String clickedItemIndex) {
         Intent i = new Intent(getActivity(), DetailActivity.class).putExtra(INTENT_EXTRA,clickedItemIndex);
@@ -96,12 +111,6 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         BufferedReader reader;
         String forecastJsonStr;
 
-        RetrieveWeatherData(){
-            HttpURLConnection urlConnection = null;
-            BufferedReader reader = null;
-            String forecastJsonStr = null;
-        }
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -110,81 +119,17 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
         @Override
         protected String[] doInBackground(String... weatherArray) {
-            final String API_KEY = "4ea939406639022ce1e875b256de6c8a";
-            String id = "524901";
-            String format = "json";
-            String units = "metric";
+            URL weatherRequest = NetworkUtils.buildUrl(weatherArray[0]);
 
-            int numDays=7;
             try {
-                final String FORECAST_BASE_URL = "http://api.openweathermap.org/data/2.5/forecast/daily?";
-                final String QUERY_PARAM = "q";
-                final String FORMAT_PARAM = "mode";
-                final String UNITS_PARAM = "units";
-                final String DAYS_PARAM = "cnt";
-                final String ID_PARAM = "id";
-                final String APP_ID = "APPID";
+                String jsonWeatherResponse = NetworkUtils.getResponseFromHttpUrl(weatherRequest);
+                JsonParser jsonParser = new JsonParser(getActivity());
+                weatherArray = jsonParser.getWeatherDataFromJson(jsonWeatherResponse);
 
-                Uri builtUri = Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(QUERY_PARAM,weatherArray[0])
-                        .appendQueryParameter(FORMAT_PARAM, format)
-                        .appendQueryParameter(UNITS_PARAM,units)
-                        .appendQueryParameter(DAYS_PARAM,Integer.toString(numDays))
-                        .appendQueryParameter(ID_PARAM,id)
-                        .appendQueryParameter(APP_ID, API_KEY)
-                        .build();
-
-                Log.d("t", "LOOK "+builtUri.toString());
-
-
-                URL url = new URL(builtUri.toString());
-
-                urlConnection = (HttpURLConnection) url.openConnection();
-                urlConnection.setRequestMethod("GET");
-                urlConnection.connect();
-
-                // Read the input stream into a String
-                InputStream inputStream = null;
-
-                inputStream = urlConnection.getInputStream();
-                StringBuffer buffer = new StringBuffer();
-                if (inputStream == null) {
-                    Log.v("1", "nothing retrieved");
-                }
-                reader = new BufferedReader(new InputStreamReader(inputStream));
-
-                String line;
-
-                try {
-                    while ((line = reader.readLine()) != null) {
-                        buffer.append(line + "\n");//Helpful for debugging
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                if (buffer.length() == 0) {
-                    Log.v("1", "nothing in bufferedString");
-                }else{
-                    forecastJsonStr = buffer.toString();
-                    //USE JSON OBJECT
-                    JsonParser jsonParser = new JsonParser(getActivity());
-                    weatherArray = jsonParser.getWeatherDataFromJson(forecastJsonStr);
-                }
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {
                 e.printStackTrace();
-            } finally{
-                if (urlConnection != null) {
-                    urlConnection.disconnect();
-                }
-                if (reader != null) {
-                    try {
-                        reader.close();
-                    } catch (final IOException e) {
-                        Log.e("PlaceholderFragment", "Error closing stream", e);
-                    }
-                }
             }
 
             return weatherArray;
@@ -195,7 +140,10 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
             super.onPostExecute(strings);
             if (strings!=null){
+                showWeatherDataView();
                 forecastRecycleAdapter.setWeatherData(strings);
+            }else {
+                showErrorMessage();
             }
         }
     }
