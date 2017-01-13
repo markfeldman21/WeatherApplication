@@ -107,37 +107,29 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
 
     public class RetrieveWeatherData extends AsyncTask<String,Void,String[]> {
-        HttpURLConnection urlConnection;
-        BufferedReader reader;
-        String forecastJsonStr;
-
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-
         }
 
         @Override
         protected String[] doInBackground(String... weatherArray) {
             URL weatherRequest = NetworkUtils.buildUrl(weatherArray[0]);
-
             try {
                 String jsonWeatherResponse = NetworkUtils.getResponseFromHttpUrl(weatherRequest);
                 JsonParser jsonParser = new JsonParser(getActivity());
                 weatherArray = jsonParser.getWeatherDataFromJson(jsonWeatherResponse);
-
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (JSONException e) {
                 e.printStackTrace();
+                weatherArray = null;
             }
-
             return weatherArray;
         }
 
         @Override
         protected void onPostExecute(String[] strings) {
-
             super.onPostExecute(strings);
             if (strings!=null){
                 showWeatherDataView();
