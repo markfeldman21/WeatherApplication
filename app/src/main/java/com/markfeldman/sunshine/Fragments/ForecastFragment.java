@@ -21,6 +21,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.os.AsyncTask;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,6 +47,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     private TextView errorMessage;
     private final static int SEARCH_LOADER = 22;
     private static final String SEARCH_QUERY_URL_EXTRA = "query";
+    private ProgressBar progressBar;
 
 
     public ForecastFragment() {
@@ -77,7 +79,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_forecast, container, false);
         errorMessage = (TextView)view.findViewById(R.id.tv_error_message_display);
-
+        progressBar = (ProgressBar)view.findViewById(R.id.pb_loading_indicator);
         recyclerView = (RecyclerView)view.findViewById(R.id.recycleViewForecast);
         LinearLayoutManager layoutManager = new LinearLayoutManager(getActivity());
         recyclerView.setLayoutManager(layoutManager);
@@ -130,13 +132,20 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     @Override
     public Loader<String> onCreateLoader(int id, final Bundle args) {
         return  new AsyncTaskLoader<String>(getActivity()) {
+            String mJsonResult;
             @Override
             protected void onStartLoading() {
+                progressBar.setVisibility(View.VISIBLE);
                 super.onStartLoading();
                 if (args == null){
                     return;
                 }
-                forceLoad();
+                if (mJsonResult != null){
+                    deliverResult(mJsonResult);
+                }else{
+                    forceLoad();
+                }
+
             }
 
             @Override
@@ -154,12 +163,19 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
                     return null;
                 }
             }
+
+            @Override
+            public void deliverResult(String data) {
+                mJsonResult = data;
+                super.deliverResult(data);
+            }
         };
     }
 
     @Override
     public void onLoadFinished(Loader<String> loader, String data) {
         String weatherArray[] = null;
+        progressBar.setVisibility(View.INVISIBLE);
         if (data == null){
             showErrorMessage();
         }else{
