@@ -6,6 +6,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.LoaderManager;
+import android.support.v4.content.AsyncTaskLoader;
+import android.support.v4.content.Loader;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -35,11 +38,14 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener {
+public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String>
+{
     private RecyclerView recyclerView;
     private ForecastAdapter forecastRecycleAdapter;
     private final String INTENT_EXTRA = "Intent Extra";
     private TextView errorMessage;
+    private final static int SEARCH_LOADER = 22;
+    private static final String SEARCH_QUERY_URL_EXTRA = "query";
 
 
     public ForecastFragment() {
@@ -78,6 +84,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         recyclerView.setHasFixedSize(true);
         forecastRecycleAdapter = new ForecastAdapter(this);
         recyclerView.setAdapter(forecastRecycleAdapter);
+
         return view;
     }
 
@@ -85,7 +92,22 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
         String location = prefs.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
 
-        new RetrieveWeatherData().execute(location);
+        URL weatherRequest = NetworkUtils.buildUrl(location);
+
+        Bundle queryBundle = new Bundle();
+        queryBundle.putString(SEARCH_QUERY_URL_EXTRA,weatherRequest.toString());
+
+        //CHECK IF LOADER EXISTS
+        LoaderManager loaderManager = getActivity().getSupportLoaderManager();
+
+        Loader<String> githubSearchLoader = loaderManager.getLoader(SEARCH_LOADER);
+        if (githubSearchLoader == null) {
+            loaderManager.initLoader(SEARCH_LOADER, queryBundle, this);
+        } else {
+            loaderManager.restartLoader(SEARCH_LOADER, queryBundle, this);
+        }
+
+        //new RetrieveWeatherData().execute(location);
     }
 
     private void showErrorMessage(){
@@ -105,7 +127,61 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         startActivity(i);
     }
 
+    @Override
+    public Loader<String> onCreateLoader(int id, final Bundle args) {
+        return  new AsyncTaskLoader<String>(getActivity()) {
+            @Override
+            protected void onStartLoading() {
+                super.onStartLoading();
+                if (args == null){
+                    return;
+                }
+                forceLoad();
+            }
 
+            @Override
+            public String loadInBackground() {
+                String searchQueryURLString = args.getString(SEARCH_QUERY_URL_EXTRA);
+                if (searchQueryURLString==null){
+                    return null;
+                }
+                try {
+                    URL githubUrl = new URL(searchQueryURLString);
+                    String jsonWeatherResponse = NetworkUtils.getResponseFromHttpUrl(githubUrl);
+                    return jsonWeatherResponse;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<String> loader, String data) {
+        String weatherArray[] = null;
+        if (data == null){
+            showErrorMessage();
+        }else{
+            JsonParser jsonParser = new JsonParser(getActivity());
+            try {
+                weatherArray = jsonParser.getWeatherDataFromJson(data);
+                showWeatherDataView();
+                forecastRecycleAdapter.setWeatherData(weatherArray);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<String> loader) {
+
+    }
+
+/*
     public class RetrieveWeatherData extends AsyncTask<String,Void,String[]> {
         @Override
         protected void onPreExecute() {
@@ -138,5 +214,5 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
                 showErrorMessage();
             }
         }
-    }
+    }*/
 }
