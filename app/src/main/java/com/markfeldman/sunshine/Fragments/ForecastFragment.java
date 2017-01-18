@@ -29,6 +29,7 @@ import com.markfeldman.sunshine.Activities.DetailActivity;
 import com.markfeldman.sunshine.DataHelpers.ForecastAdapter;
 import com.markfeldman.sunshine.DataHelpers.JsonParser;
 import com.markfeldman.sunshine.DataHelpers.NetworkUtils;
+import com.markfeldman.sunshine.DataHelpers.SunshinePreferences;
 import com.markfeldman.sunshine.R;
 
 import org.json.JSONException;
@@ -39,7 +40,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String>
+public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String>,
+        SharedPreferences.OnSharedPreferenceChangeListener
 {
     private RecyclerView recyclerView;
     private ForecastAdapter forecastRecycleAdapter;
@@ -48,25 +50,8 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     private final static int SEARCH_LOADER = 22;
     private static final String SEARCH_QUERY_URL_EXTRA = "query";
     private ProgressBar progressBar;
+    private String location;
 
-
-    public ForecastFragment() {
-        setHasOptionsMenu(true);
-    }
-
-    @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        super.onCreateOptionsMenu(menu, inflater);
-        inflater.inflate(R.menu.forecastfragment,menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId()==R.id.action_refresh){
-            updateWeather();
-        }
-        return super.onOptionsItemSelected(item);
-    }
 
     @Override
     public void onStart() {
@@ -87,13 +72,17 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         forecastRecycleAdapter = new ForecastAdapter(this);
         recyclerView.setAdapter(forecastRecycleAdapter);
 
+
+
+        PreferenceManager.getDefaultSharedPreferences(getActivity()).registerOnSharedPreferenceChangeListener(this);
+
+
+
         return view;
     }
 
     public void updateWeather(){
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        String location = prefs.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
-
+        location = SunshinePreferences.getPreferredWeatherLocation(getActivity());
         URL weatherRequest = NetworkUtils.buildUrl(location);
 
         Bundle queryBundle = new Bundle();
@@ -108,8 +97,6 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         } else {
             loaderManager.restartLoader(SEARCH_LOADER, queryBundle, this);
         }
-
-        //new RetrieveWeatherData().execute(location);
     }
 
     private void showErrorMessage(){
@@ -197,38 +184,16 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
     }
 
-/*
-    public class RetrieveWeatherData extends AsyncTask<String,Void,String[]> {
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(getString(R.string.pref_location_key))){
+            location = sharedPreferences.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
         }
+    }
 
-        @Override
-        protected String[] doInBackground(String... weatherArray) {
-            URL weatherRequest = NetworkUtils.buildUrl(weatherArray[0]);
-            try {
-                String jsonWeatherResponse = NetworkUtils.getResponseFromHttpUrl(weatherRequest);
-                JsonParser jsonParser = new JsonParser(getActivity());
-                weatherArray = jsonParser.getWeatherDataFromJson(jsonWeatherResponse);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-                weatherArray = null;
-            }
-            return weatherArray;
-        }
-
-        @Override
-        protected void onPostExecute(String[] strings) {
-            super.onPostExecute(strings);
-            if (strings!=null){
-                showWeatherDataView();
-                forecastRecycleAdapter.setWeatherData(strings);
-            }else {
-                showErrorMessage();
-            }
-        }
-    }*/
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        PreferenceManager.getDefaultSharedPreferences(getActivity()).unregisterOnSharedPreferenceChangeListener(this);
+    }
 }

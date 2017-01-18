@@ -1,6 +1,7 @@
 package com.markfeldman.sunshine.Activities;
 
 import android.content.Intent;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Menu;
@@ -14,8 +15,11 @@ public class DetailActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getSupportActionBar();
         setContentView(R.layout.activity_detail);
+        ActionBar actionBar = this.getSupportActionBar();
+        if (actionBar!=null){
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, new DetailFragment())
@@ -39,7 +43,7 @@ public class DetailActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         if (id == R.id.action_settings) {
-            Intent i = new Intent(getApplicationContext(), SettingsActivity.class);
+            Intent i = new Intent(getApplicationContext(), MySettingsActivity.class);
             startActivity(i);
             return true;
         }

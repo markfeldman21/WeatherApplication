@@ -6,4 +6,7 @@
         android:title="@string/title_activity_settings"
         app:showAsAction="never"/>
 
+    <item android:id="@+id/map_location"
+        android:title="@string/map_location"
+        app:showAsAction = "never"/>
 </menu>
