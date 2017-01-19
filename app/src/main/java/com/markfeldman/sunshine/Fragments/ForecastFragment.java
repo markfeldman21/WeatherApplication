@@ -9,8 +9,10 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.ShareActionProvider;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -40,24 +42,22 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String>,
+public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String[]>,
         SharedPreferences.OnSharedPreferenceChangeListener
 {
     private RecyclerView recyclerView;
     private ForecastAdapter forecastRecycleAdapter;
     private final String INTENT_EXTRA = "Intent Extra";
     private TextView errorMessage;
-    private final static int SEARCH_LOADER = 22;
+    private final static int FORECAST_LOADER = 1;
     private static final String SEARCH_QUERY_URL_EXTRA = "query";
     private ProgressBar progressBar;
-    private String location;
+    private static boolean PREFERENCES_HAVE_BEEN_UPDATED = false;
 
-
-    @Override
-    public void onStart() {
-        super.onStart();
-        updateWeather();
+    public ForecastFragment(){
+        setHasOptionsMenu(true);
     }
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -72,32 +72,107 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         forecastRecycleAdapter = new ForecastAdapter(this);
         recyclerView.setAdapter(forecastRecycleAdapter);
 
+        int loaderID = FORECAST_LOADER;
+        LoaderManager.LoaderCallbacks<String[]> callback = this;
 
-
-        PreferenceManager.getDefaultSharedPreferences(getActivity()).registerOnSharedPreferenceChangeListener(this);
-
-
+        Bundle bundleForLoader = null;
+        //The variable callback is passed to the call to initLoader below. This means that whenever the loaderManager has
+        //something to notify us of, it will do so through this callback.
+        getActivity().getSupportLoaderManager().initLoader(loaderID,bundleForLoader,callback);
 
         return view;
     }
 
-    public void updateWeather(){
-        location = SunshinePreferences.getPreferredWeatherLocation(getActivity());
-        URL weatherRequest = NetworkUtils.buildUrl(location);
-
-        Bundle queryBundle = new Bundle();
-        queryBundle.putString(SEARCH_QUERY_URL_EXTRA,weatherRequest.toString());
-
-        //CHECK IF LOADER EXISTS
-        LoaderManager loaderManager = getActivity().getSupportLoaderManager();
-
-        Loader<String> githubSearchLoader = loaderManager.getLoader(SEARCH_LOADER);
-        if (githubSearchLoader == null) {
-            loaderManager.initLoader(SEARCH_LOADER, queryBundle, this);
-        } else {
-            loaderManager.restartLoader(SEARCH_LOADER, queryBundle, this);
+    @Override
+    public void onStart() {
+        super.onStart();
+        if (PREFERENCES_HAVE_BEEN_UPDATED) {
+            getActivity().getSupportLoaderManager().restartLoader(FORECAST_LOADER, null, this);
+            PREFERENCES_HAVE_BEEN_UPDATED = false;
         }
     }
+
+
+    @Override
+    public Loader<String[]> onCreateLoader(int id, Bundle args) {
+
+        return new AsyncTaskLoader<String[]>(getActivity()) {
+            String []jsonResults = null;
+            @Override
+            protected void onStartLoading() {
+                if(jsonResults!=null){
+                    deliverResults(jsonResults);
+                }else{
+                    progressBar.setVisibility(View.VISIBLE);
+                    forceLoad();
+                }
+                super.onStartLoading();
+            }
+
+            @Override
+            public String[] loadInBackground() {
+                String location = SunshinePreferences.getPreferredWeatherLocation(getActivity());
+                URL weatherRequest = NetworkUtils.buildUrl(location);
+
+                try {
+                    String jsonRawResponse = NetworkUtils.getResponseFromHttpUrl(weatherRequest);
+                    JsonParser jsonParser = new JsonParser(getActivity());
+                    String[] jsonArrayResponse = jsonParser.getWeatherDataFromJson(jsonRawResponse);
+                    return jsonArrayResponse;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return null;
+                }
+            }
+
+            public void deliverResults(String[] data){
+                jsonResults = data;
+                super.deliverResult(data);
+            }
+        };
+    }
+
+    @Override
+    public void onLoadFinished(Loader<String[]> loader, String[] data) {
+        progressBar.setVisibility(View.INVISIBLE);
+        forecastRecycleAdapter.setWeatherData(data);
+
+        if (null==data){
+            showErrorMessage();
+        }else{
+            showWeatherDataView();
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<String[]> loader) {
+
+    }
+
+    private void openPreferredLocationInMap(){
+        String addressString = SunshinePreferences.getPreferredWeatherLocation(getActivity());
+        Uri geoLocation = Uri.parse("geo:0,0?q=" + addressString);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(geoLocation);
+
+        if (intent.resolveActivity(getActivity().getPackageManager()) != null) {
+            startActivity(intent);
+        } else {
+            Toast.makeText(getActivity(), "Couldn't call " + geoLocation.toString() + ", no receiving apps installed!",
+                    Toast.LENGTH_LONG).show();
+
+        }
+
+    }
+
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        PREFERENCES_HAVE_BEEN_UPDATED = true;
+    }
+
 
     private void showErrorMessage(){
         recyclerView.setVisibility(View.INVISIBLE);
@@ -116,84 +191,18 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         startActivity(i);
     }
 
+
     @Override
-    public Loader<String> onCreateLoader(int id, final Bundle args) {
-        return  new AsyncTaskLoader<String>(getActivity()) {
-            String mJsonResult;
-            @Override
-            protected void onStartLoading() {
-                progressBar.setVisibility(View.VISIBLE);
-                super.onStartLoading();
-                if (args == null){
-                    return;
-                }
-                if (mJsonResult != null){
-                    deliverResult(mJsonResult);
-                }else{
-                    forceLoad();
-                }
-
-            }
-
-            @Override
-            public String loadInBackground() {
-                String searchQueryURLString = args.getString(SEARCH_QUERY_URL_EXTRA);
-                if (searchQueryURLString==null){
-                    return null;
-                }
-                try {
-                    URL githubUrl = new URL(searchQueryURLString);
-                    String jsonWeatherResponse = NetworkUtils.getResponseFromHttpUrl(githubUrl);
-                    return jsonWeatherResponse;
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return null;
-                }
-            }
-
-            @Override
-            public void deliverResult(String data) {
-                mJsonResult = data;
-                super.deliverResult(data);
-            }
-        };
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.forecastfragment,menu);
     }
 
     @Override
-    public void onLoadFinished(Loader<String> loader, String data) {
-        String weatherArray[] = null;
-        progressBar.setVisibility(View.INVISIBLE);
-        if (data == null){
-            showErrorMessage();
-        }else{
-            JsonParser jsonParser = new JsonParser(getActivity());
-            try {
-                weatherArray = jsonParser.getWeatherDataFromJson(data);
-                showWeatherDataView();
-                forecastRecycleAdapter.setWeatherData(weatherArray);
-
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId()==R.id.map_location){
+            openPreferredLocationInMap();
         }
-
-    }
-
-    @Override
-    public void onLoaderReset(Loader<String> loader) {
-
-    }
-
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-        if (key.equals(getString(R.string.pref_location_key))){
-            location = sharedPreferences.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
-        }
-    }
-
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        PreferenceManager.getDefaultSharedPreferences(getActivity()).unregisterOnSharedPreferenceChangeListener(this);
+        return super.onOptionsItemSelected(item);
     }
 }

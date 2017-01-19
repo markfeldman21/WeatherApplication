@@ -56,7 +56,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements Shared
                 preference.setSummary(listPreference.getEntries()[prefIndex]);
             }
         } else {
-            // For other preferences, set the summary to the value's simple string representation.
+            // For other preferences, set the summary to the value's simple string representatin.
             preference.setSummary(stringValue);
         }
     }
