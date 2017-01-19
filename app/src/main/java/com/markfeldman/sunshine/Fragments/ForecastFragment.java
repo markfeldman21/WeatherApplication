@@ -4,42 +4,29 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
-import android.support.v4.view.MenuItemCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.ShareActionProvider;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.ListView;
-import android.os.AsyncTask;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.markfeldman.sunshine.Activities.DetailActivity;
 import com.markfeldman.sunshine.DataHelpers.ForecastAdapter;
-import com.markfeldman.sunshine.DataHelpers.JsonParser;
-import com.markfeldman.sunshine.DataHelpers.NetworkUtils;
+import com.markfeldman.sunshine.Utilities.JsonParser;
+import com.markfeldman.sunshine.Utilities.NetworkUtils;
 import com.markfeldman.sunshine.DataHelpers.SunshinePreferences;
 import com.markfeldman.sunshine.R;
 
-import org.json.JSONException;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class ForecastFragment extends Fragment implements ForecastAdapter.ClickedListener, LoaderManager.LoaderCallbacks<String[]>,

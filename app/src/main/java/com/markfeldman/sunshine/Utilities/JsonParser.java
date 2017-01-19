@@ -1,4 +1,4 @@
-package com.markfeldman.sunshine.DataHelpers;
+package com.markfeldman.sunshine.Utilities;
 
 import android.content.Context;
 import android.content.SharedPreferences;
