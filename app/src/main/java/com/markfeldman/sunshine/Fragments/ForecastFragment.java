@@ -8,8 +8,10 @@ import android.support.v4.app.Fragment;
 import android.support.v4.app.LoaderManager;
 import android.support.v4.content.AsyncTaskLoader;
 import android.support.v4.content.Loader;
+import android.support.v7.preference.PreferenceManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -66,6 +68,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
         //The variable callback is passed to the call to initLoader below. This means that whenever the loaderManager has
         //something to notify us of, it will do so through this callback.
         getActivity().getSupportLoaderManager().initLoader(loaderID,bundleForLoader,callback);
+        PreferenceManager.getDefaultSharedPreferences(getActivity()).registerOnSharedPreferenceChangeListener(this);
 
         return view;
     }
@@ -73,12 +76,18 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
     @Override
     public void onStart() {
         super.onStart();
+        Log.d("FORCASET FRAG", "IN ON START!!!!!!! PREF = " + PREFERENCES_HAVE_BEEN_UPDATED);
         if (PREFERENCES_HAVE_BEEN_UPDATED) {
             getActivity().getSupportLoaderManager().restartLoader(FORECAST_LOADER, null, this);
             PREFERENCES_HAVE_BEEN_UPDATED = false;
         }
     }
 
+    @Override
+    public void onDestroy() {
+        PreferenceManager.getDefaultSharedPreferences(getActivity()).unregisterOnSharedPreferenceChangeListener(this);
+        super.onDestroy();
+    }
 
     @Override
     public Loader<String[]> onCreateLoader(int id, Bundle args) {
@@ -157,6 +166,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        Log.d("FORCASET FRAG", "PREFERENCES UPDATED!!!!!!!");
         PREFERENCES_HAVE_BEEN_UPDATED = true;
     }
 

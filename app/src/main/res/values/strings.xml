@@ -23,7 +23,7 @@
         <item>Imperial</item>
     </string-array>
     <string name="pref_location_key" translatable="false">location</string>
-    <string name="pref_location_default" translatable="false">02466</string>
+    <string name="pref_location_default" translatable="false">35006</string>
     <string name="error_message">Something Went Wrong</string>
 
     <!-- Weather Conditions (From OpenWeatherMap) -->
