@@ -91,6 +91,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
     @Override
     public Loader<String[]> onCreateLoader(int id, Bundle args) {
+        Log.d("Forecast","IN LOAD IN ON CREATE LOADER!!!!!!");
 
         return new AsyncTaskLoader<String[]>(getActivity()) {
             String []jsonResults = null;
@@ -107,6 +108,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
             @Override
             public String[] loadInBackground() {
+                Log.d("Forecast","IN LOAD IN BACKGROUND!!!!!!");
                 String location = SunshinePreferences.getPreferredWeatherLocation(getActivity());
                 URL weatherRequest = NetworkUtils.buildUrl(location);
 
@@ -122,6 +124,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
             }
 
             public void deliverResults(String[] data){
+                Log.d("Forecast","IN LOAD DELIVERRESULTS!!!!!!");
                 jsonResults = data;
                 super.deliverResult(data);
             }
@@ -130,6 +133,7 @@ public class ForecastFragment extends Fragment implements ForecastAdapter.Clicke
 
     @Override
     public void onLoadFinished(Loader<String[]> loader, String[] data) {
+        Log.d("Forecast","IN LOAD ON LOAD FINISHED!!!!!!");
         progressBar.setVisibility(View.INVISIBLE);
         forecastRecycleAdapter.setWeatherData(data);
 
